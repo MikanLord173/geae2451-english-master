@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Master - 英文聽讀練習 App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-short': 'bounce 0.5s ease-in-out 2',
+                        'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    },
+                    keyframes: {
+                        pop: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .mic-wave {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 min-h-full font-sans antialiased flex flex-col justify-between selection:bg-sky-500 selection:text-white">
+
+    <!-- App Navigation Header -->
+    <header class="bg-slate-800/80 border-b border-slate-700/60 backdrop-blur sticky top-0 z-50 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-sky-500/30">
+                    <i class="fa-solid font-bold text-xl fa-headphones"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg text-white tracking-wide">English <span class="text-sky-400">Master</span></h1>
+                    <p class="text-xs text-slate-400">聽力與口說極限挑戰 50 題</p>
+                </div>
+            </div>
+
+            <!-- Header Settings / Stats -->
+            <div class="flex items-center space-x-2">
+                <button id="ttsSettingsBtn" onclick="openVoiceSettings()" class="p-2 rounded-lg bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 transition" title="語音設定">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+                <div id="soundToggleBtn" onclick="toggleSound()" class="p-2 rounded-lg bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 cursor-pointer transition" title="切換音效">
+                    <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div class="w-full max-w-3xl">
+
+            <!-- SECTION 1: Welcome & Difficulty Selection Screen -->
+            <div id="welcomeScreen" class="bg-slate-800 rounded-3xl p-6 md:p-10 border border-slate-700 shadow-2xl text-center space-y-8 animate-pop">
+                <div class="space-y-3">
+                    <span class="inline-block px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full text-xs font-semibold tracking-wider uppercase border border-sky-500/20">
+                        Web Speech API Powered
+                    </span>
+                    <h2 class="text-3xl md:text-4xl font-extrabold text-white">開啟你的 50 題英文聽讀挑戰</h2>
+                    <p class="text-slate-400 max-w-lg mx-auto text-sm md:text-base">
+                        結合單字練習、聽故事回答問題與口說朗讀辨識。展現你的發音與聽力，爭取最高分與專屬稱號！
+                    </p>
+                </div>
+
+                <!-- Difficulty Selection -->
+                <div class="space-y-4">
+                    <label class="block text-sm font-medium text-slate-300">選擇測驗難度</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-xl mx-auto">
+                        <button onclick="selectDifficulty('easy')" id="diff-easy" class="diff-btn p-4 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500 transition-all text-left flex flex-col justify-between group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-lg text-emerald-400">Easy 初級</span>
+                                <i class="fa-solid fa-seedling text-emerald-400 group-hover:scale-110 transition"></i>
+                            </div>
+                            <span class="text-xs text-slate-400">基礎單字、慢速朗讀、日常對話故事</span>
+                        </button>
+                        
+                        <button onclick="selectDifficulty('medium')" id="diff-medium" class="diff-btn active-diff p-4 rounded-2xl border-2 border-sky-500 bg-sky-500/20 text-sky-300 transition-all text-left flex flex-col justify-between group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-lg text-sky-400">Medium 中級</span>
+                                <i class="fa-solid fa-fire text-sky-400 group-hover:scale-110 transition"></i>
+                            </div>
+                            <span class="text-xs text-slate-400">實用詞彙、標準語速、情境式短文</span>
+                        </button>
+
+                        <button onclick="selectDifficulty('hard')" id="diff-hard" class="diff-btn p-4 rounded-2xl border-2 border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:border-purple-500 transition-all text-left flex flex-col justify-between group">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-lg text-purple-400">Hard 高級</span>
+                                <i class="fa-solid fa-bolt text-purple-400 group-hover:scale-110 transition"></i>
+                            </div>
+                            <span class="text-xs text-slate-400">進階語彙、快速流利、複雜段落解析</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Features Highlight -->
+                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-slate-700/60 max-w-lg mx-auto text-xs text-slate-400">
+                    <div class="flex flex-col items-center space-y-1">
+                        <i class="fa-solid fa-spell-check text-sky-400 text-lg"></i>
+                        <span>單字聽寫聽選</span>
+                    </div>
+                    <div class="flex flex-col items-center space-y-1">
+                        <i class="fa-solid fa-book-open-reader text-emerald-400 text-lg"></i>
+                        <span>故事聽力理解</span>
+                    </div>
+                    <div class="flex flex-col items-center space-y-1">
+                        <i class="fa-solid fa-microphone text-rose-400 text-lg"></i>
+                        <span>發音口說評分</span>
+                    </div>
+                </div>
+
+                <button onclick="startQuiz()" class="w-full max-w-sm py-4 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-lg rounded-2xl shadow-lg shadow-sky-500/25 active:scale-95 transition-all transform flex items-center justify-center space-x-2 mx-auto">
+                    <span>開始 50 題極限挑戰</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- SECTION 2: Active Quiz Area Screen (Hidden by default) -->
+            <div id="quizScreen" class="hidden space-y-4">
+                
+                <!-- Status & Progress Dashboard -->
+                <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-xl flex flex-wrap items-center justify-between gap-3">
+                    <!-- Progress Bar -->
+                    <div class="flex-1 min-w-[200px]">
+                        <div class="flex justify-between text-xs font-semibold text-slate-400 mb-1">
+                            <span>進度 Progress</span>
+                            <span id="questionCounter" class="text-sky-400">1 / 50</span>
+                        </div>
+                        <div class="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="progressBar" class="h-full bg-gradient-to-r from-sky-500 to-indigo-500 w-2% transition-all duration-300"></div>
+                        </div>
+                    </div>
+
+                    <!-- Live Stats (Combo & Score) -->
+                    <div class="flex items-center space-x-4 pl-2 border-l border-slate-700">
+                        <div class="text-center">
+                            <div class="text-xs text-slate-400">COMBO</div>
+                            <div id="comboDisplay" class="text-xl font-extrabold text-amber-400 flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-fire text-amber-500 text-sm"></i>
+                                <span>0</span>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-xs text-slate-400">SCORE</div>
+                            <div id="scoreDisplay" class="text-xl font-extrabold text-white">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Story Block (Dynamically Shown for Story Questions) -->
+                <div id="storyContainer" class="hidden bg-slate-800/90 rounded-2xl p-5 border border-amber-500/30 bg-amber-500/5 shadow-xl space-y-3">
+                    <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-book-open"></i> Story Context
+                        </span>
+                        <button onclick="playStoryTTS()" class="px-3 py-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-volume-high"></i> 朗讀故事
+                        </button>
+                    </div>
+                    <p id="storyText" class="text-slate-200 text-sm md:text-base leading-relaxed italic font-serif">
+                        <!-- Story text inserted here -->
+                    </p>
+                </div>
+
+                <!-- Main Question Card -->
+                <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700 shadow-2xl space-y-6 relative overflow-hidden">
+                    
+                    <!-- Question Type Indicator -->
+                    <div class="flex justify-between items-center">
+                        <span id="questionTypeBadge" class="px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full text-xs font-bold border border-sky-500/20 flex items-center gap-1.5">
+                            <i class="fa-solid fa-headphones"></i> Listening
+                        </span>
+                        <div id="difficultyBadge" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                            Medium
+                        </div>
+                    </div>
+
+                    <!-- Question Content Area -->
+                    <div class="text-center space-y-4 my-2">
+                        <h3 id="questionTitle" class="text-xl md:text-2xl font-bold text-white leading-snug">
+                            <!-- Question Title or Prompt -->
+                        </h3>
+
+                        <!-- TTS Audio Player Control Button -->
+                        <div id="ttsControlArea" class="flex justify-center items-center gap-3">
+                            <button id="playAudioBtn" onclick="playQuestionTTS()" class="p-4 rounded-full bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/30 active:scale-90 transition-all flex items-center justify-center w-16 h-16">
+                                <i class="fa-solid fa-volume-high text-2xl"></i>
+                            </button>
+                            <span class="text-xs text-slate-400 block">點擊播放發音</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Input / Answer Options Area -->
+                    <div id="interactionArea" class="space-y-4">
+                        <!-- Multiple Choice Options Container -->
+                        <div id="choiceOptions" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <!-- Buttons dynamically generated -->
+                        </div>
+
+                        <!-- Pronunciation / Speech Input Area -->
+                        <div id="speechArea" class="hidden text-center space-y-4 pt-2">
+                            <div id="targetSentenceBox" class="p-4 bg-slate-900/80 rounded-2xl border border-slate-700 text-lg font-semibold text-sky-300">
+                                <!-- Sentence to speak -->
+                            </div>
+
+                            <div class="flex flex-col items-center space-y-2">
+                                <button id="micBtn" onclick="toggleSpeechRecognition()" class="w-20 h-20 rounded-full bg-rose-500 hover:bg-rose-400 text-white shadow-lg shadow-rose-500/30 flex items-center justify-center transition-all transform active:scale-95">
+                                    <i id="micIcon" class="fa-solid fa-microphone text-3xl"></i>
+                                </button>
+                                <span id="micStatus" class="text-xs font-medium text-slate-400">點擊麥克風開始朗讀</span>
+                            </div>
+
+                            <!-- Recognized Speech Feedback -->
+                            <div id="speechResultBox" class="hidden p-3 bg-slate-900 rounded-xl text-sm border border-slate-700 text-left">
+                                <div class="text-xs text-slate-400 mb-1">辨識結果 (Recognized):</div>
+                                <div id="speechResultText" class="font-medium text-slate-200">...</div>
+                                <div id="speechMatchRate" class="text-xs font-bold mt-1 text-emerald-400"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instant Feedback Bar -->
+                    <div id="feedbackBox" class="hidden p-4 rounded-2xl text-center font-bold text-base animate-pop">
+                        <!-- Feedback text here -->
+                    </div>
+
+                    <!-- Next Question Action Button -->
+                    <button id="nextBtn" onclick="nextQuestion()" class="hidden w-full py-3.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-2xl transition flex items-center justify-center space-x-2">
+                        <span>下一題 Next</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION 3: Summary & Results Screen (Hidden by default) -->
+            <div id="summaryScreen" class="hidden bg-slate-800 rounded-3xl p-6 md:p-10 border border-slate-700 shadow-2xl text-center space-y-8 animate-pop">
+                <div class="space-y-2">
+                    <span class="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-500/20">
+                        Challenge Completed
+                    </span>
+                    <h2 class="text-3xl md:text-4xl font-extrabold text-white">測驗完成！結算報告</h2>
+                    <p class="text-slate-400 text-sm">恭喜你完成了 50 題的聽讀綜合極限挑戰！</p>
+                </div>
+
+                <!-- Award Title Card -->
+                <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 border border-slate-700 shadow-inner space-y-3">
+                    <div class="text-xs text-slate-400">獲得專屬稱號 AWARD TITLE</div>
+                    <div id="userTitle" class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-sky-400 to-emerald-400">
+                        Phonics Master
+                    </div>
+                    <div id="titleDesc" class="text-xs text-slate-400 max-w-md mx-auto">
+                        具有驚人的發音敏銳度與優秀的英語聽力與綜合理解能力！
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">總得分 Final Score</div>
+                        <div id="finalScore" class="text-2xl font-extrabold text-sky-400">0</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">答對率 Accuracy</div>
+                        <div id="finalAccuracy" class="text-2xl font-extrabold text-emerald-400">0%</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">最高 Combo</div>
+                        <div id="finalMaxCombo" class="text-2xl font-extrabold text-amber-400">0</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-700">
+                        <div class="text-xs text-slate-400 mb-1">平均時間/題</div>
+                        <div id="finalAvgTime" class="text-2xl font-extrabold text-indigo-400">0s</div>
+                    </div>
+                </div>
+
+                <!-- Restart Button -->
+                <button onclick="resetApp()" class="w-full max-w-sm py-4 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-lg rounded-2xl shadow-lg shadow-sky-500/25 active:scale-95 transition-all transform flex items-center justify-center space-x-2 mx-auto">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>再挑戰一輪 50 題</span>
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Voice Settings Modal -->
+    <div id="voiceModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-3xl border border-slate-700 p-6 w-full max-w-md space-y-6 shadow-2xl animate-pop">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-sky-400"></i> 語音設定 (TTS Settings)
+                </h3>
+                <button onclick="closeVoiceSettings()" class="text-slate-400 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">選擇朗讀人聲 (English Voice)</label>
+                    <select id="voiceSelect" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-xl p-3 focus:outline-none focus:border-sky-500">
+                        <option value="">載入中 Default System Voice...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold text-slate-300 mb-2">
+                        <span>語速調整 (Speech Rate)</span>
+                        <span id="rateValue" class="text-sky-400">1.0x</span>
+                    </div>
+                    <input type="range" id="rateRange" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateRateLabel(this.value)" class="w-full accent-sky-500">
+                </div>
+            </div>
+
+            <button onclick="closeVoiceSettings()" class="w-full py-3 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-xl transition">
+                套用並關閉
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Raw Question Bank for English Quiz
+        const questionBank = {
+            easy: [
+                { type: 'vocab_choice', target: 'apple', prompt: '請問 "Apple" 的中文意思是什麼？', options: ['蘋果', '香蕉', '橘子', '葡萄'], answer: 0 },
+                { type: 'vocab_choice', target: 'dog', prompt: '聽語音，選擇正確的單字：', options: ['Cat', 'Dog', 'Duck', 'Doll'], answer: 1 },
+                { type: 'vocab_choice', target: 'sun', prompt: '請問 "Sun" 指的是什麼？', options: ['月亮', '星星', '太陽', '雲朵'], answer: 2 },
+                { type: 'speech_read', target: 'The cat sits on the mat.', prompt: '請用清晰的發音朗讀下方句子：' },
+                { type: 'speech_read', target: 'Good morning my friend.', prompt: '朗讀句子練習口說發音：' },
+                { 
+                    type: 'story_question', 
+                    story: 'Tom has a small brown dog named Max. Max loves to play with a red ball in the garden every afternoon.',
+                    prompt: 'What color is Max the dog?',
+                    options: ['White', 'Black', 'Brown', 'Yellow'],
+                    answer: 2,
+                    target: 'Tom has a small brown dog named Max. Max loves to play with a red ball in the garden every afternoon.'
+                },
+                { 
+                    type: 'story_question', 
+                    story: 'Tom has a small brown dog named Max. Max loves to play with a red ball in the garden every afternoon.',
+                    prompt: 'Where does Max play with his ball?',
+                    options: ['In the kitchen', 'In the garden', 'On the roof', 'In the park'],
+                    answer: 1,
+                    target: 'Tom has a small brown dog named Max. Max loves to play with a red ball in the garden every afternoon.'
+                }
+            ],
+            medium: [
+                { type: 'vocab_choice', target: 'curious', prompt: '請問 "curious" 的中文解釋是？', options: ['好奇的', '憤怒的', '緊張的', '快樂的'], answer: 0 },
+                { type: 'vocab_choice', target: 'adventure', prompt: '聽語音，選出你聽到的單字：', options: ['Advantage', 'Adventure', 'Advertise', 'Adviser'], answer: 1 },
+                { type: 'speech_read', target: 'Practice makes perfect in language learning.', prompt: '請讀出以下句子：' },
+                { type: 'speech_read', target: 'Technology is changing the way we live and work.', prompt: '請朗讀以下句子：' },
+                { 
+                    type: 'story_question', 
+                    story: 'Lisa decided to travel to Tokyo during her spring vacation. She enjoyed eating sushi, visiting ancient temples, and practicing her Japanese with friendly locals.',
+                    prompt: 'Why did Lisa travel to Tokyo?',
+                    options: ['For work', 'For spring vacation', 'To move permanently', 'To attend school'],
+                    answer: 1,
+                    target: 'Lisa decided to travel to Tokyo during her spring vacation. She enjoyed eating sushi, visiting ancient temples, and practicing her Japanese with friendly locals.'
+                },
+                { 
+                    type: 'story_question', 
+                    story: 'Lisa decided to travel to Tokyo during her spring vacation. She enjoyed eating sushi, visiting ancient temples, and practicing her Japanese with friendly locals.',
+                    prompt: 'What did Lisa practice with the locals?',
+                    options: ['English', 'Cooking', 'Japanese', 'Origami'],
+                    answer: 2,
+                    target: 'Lisa decided to travel to Tokyo during her spring vacation. She enjoyed eating sushi, visiting ancient temples, and practicing her Japanese with friendly locals.'
+                }
+            ],
+            hard: [
+                { type: 'vocab_choice', target: 'perseverance', prompt: '請問 "perseverance" 的意思為？', options: ['堅持不懈', '猶豫不決', '輕言放棄', '高傲自大'], answer: 0 },
+                { type: 'vocab_choice', target: 'unprecedented', prompt: '聽語音選出正確單字：', options: ['Unpredictable', 'Unprecedented', 'Unprepared', 'Unproductive'], answer: 1 },
+                { type: 'speech_read', target: 'Consistency and continuous effort are crucial for mastering English fluency.', prompt: '請朗讀高級練習句子：' },
+                { 
+                    type: 'story_question', 
+                    story: 'Artificial intelligence is rapidly revolutionizing global healthcare. By analyzing vast amounts of medical data, AI algorithms can assist doctors in diagnosing diseases earlier and developing personalized treatment plans.',
+                    prompt: 'How does AI assist medical doctors according to the text?',
+                    options: ['By performing surgery alone', 'By replacing human nurses', 'By analyzing medical data for early diagnosis', 'By selling medicines online'],
+                    answer: 2,
+                    target: 'Artificial intelligence is rapidly revolutionizing global healthcare. By analyzing vast amounts of medical data, AI algorithms can assist doctors in diagnosing diseases earlier and developing personalized treatment plans.'
+                }
+            ]
+        };
+
+        let currentDifficulty = 'medium';
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let correctCount = 0;
+        let questionStartTime = 0;
+        let totalTimeSpent = 0;
+        let soundEnabled = true;
+
+        // Speech Recognition & TTS References
+        let recognition = null;
+        let isListening = false;
+        let selectedVoice = null;
+        let speechRate = 1.0;
+
+        window.onload = function() {
+            initSpeechSynthesis();
+            initSpeechRecognition();
+        };
+
+        // TTS Speech Synthesis Setup
+        function initSpeechSynthesis() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+                loadVoices();
+            } else {
+                console.warn('SpeechSynthesis is not supported in this browser.');
+            }
+        }
+
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            if (!voiceSelect) return;
+            
+            voiceSelect.innerHTML = '';
+            
+            // Filter English Voices
+            const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+            
+            if (englishVoices.length === 0) {
+                voiceSelect.innerHTML = '<option value="">Default English Voice</option>';
+                return;
+            }
+
+            englishVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.default || voice.lang === 'en-US') {
+                    option.selected = true;
+                    selectedVoice = voice;
+                }
+                voiceSelect.appendChild(option);
+            });
+
+            voiceSelect.onchange = function() {
+                selectedVoice = englishVoices[this.value];
+            };
+        }
+
+        // Web Speech Recognition Setup
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = function() {
+                    isListening = true;
+                    document.getElementById('micBtn').classList.add('mic-wave', 'bg-red-600');
+                    document.getElementById('micStatus').textContent = '正在聆聽中...請朗讀句子';
+                    document.getElementById('micStatus').classList.add('text-rose-400');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    handleSpeechResult(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    stopMicUI();
+                    showFeedback(false, '未能清晰識別語音，請再試一次！');
+                };
+
+                recognition.onend = function() {
+                    stopMicUI();
+                };
+            } else {
+                console.warn('Web Speech Recognition API is not supported in this browser.');
+            }
+        }
+
+        function stopMicUI() {
+            isListening = false;
+            const micBtn = document.getElementById('micBtn');
+            if (micBtn) {
+                micBtn.classList.remove('mic-wave', 'bg-red-600');
+            }
+            document.getElementById('micStatus').textContent = '點擊麥克風開始朗讀';
+            document.getElementById('micStatus').classList.remove('text-rose-400');
+        }
+
+        function playSFX(type) {
+            if (!soundEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
+                    osc.frequency.setValueAtTime(174.61, ctx.currentTime + 0.15); // F3
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function selectDifficulty(diff) {
+            currentDifficulty = diff;
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.classList.remove('active-diff', 'border-sky-500', 'bg-sky-500/20');
+            });
+            const selected = document.getElementById(`diff-${diff}`);
+            selected.classList.add('active-diff', 'border-sky-500', 'bg-sky-500/20');
+
+            // Adjust speech rate based on difficulty
+            if (diff === 'easy') speechRate = 0.8;
+            else if (diff === 'medium') speechRate = 1.0;
+            else speechRate = 1.2;
+            document.getElementById('rateRange').value = speechRate;
+            document.getElementById('rateValue').textContent = speechRate + 'x';
+        }
+
+        function generate50Questions() {
+            let pool = [...questionBank[currentDifficulty]];
+            
+            // Fallback fill with extra templates to ensure exactly 50 items
+            let list = [];
+            for (let i = 0; i < 50; i++) {
+                let item = pool[i % pool.length];
+                // Clone question object to avoid reference mutations
+                let itemCopy = JSON.parse(JSON.stringify(item));
+                itemCopy.id = i + 1;
+                list.push(itemCopy);
+            }
+
+            // Shuffle options for multiple choices
+            list.forEach(q => {
+                if (q.options) {
+                    let correctText = q.options[q.answer];
+                    q.options.sort(() => Math.random() - 0.5);
+                    q.answer = q.options.indexOf(correctText);
+                }
+            });
+
+            return list;
+        }
+
+        function startQuiz() {
+            currentQuestions = generate50Questions();
+            currentIndex = 0;
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            correctCount = 0;
+            totalTimeSpent = 0;
+
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('summaryScreen').classList.add('hidden');
+            document.getElementById('quizScreen').classList.remove('hidden');
+
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = currentQuestions[currentIndex];
+            questionStartTime = Date.now();
+
+            // Update Header Stats
+            document.getElementById('questionCounter').textContent = `${currentIndex + 1} / 50`;
+            document.getElementById('progressBar').style.width = `${((currentIndex + 1) / 50) * 100}%`;
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('comboDisplay').querySelector('span').textContent = combo;
+
+            // Reset UI states
+            document.getElementById('feedbackBox').classList.add('hidden');
+            document.getElementById('nextBtn').classList.add('hidden');
+            document.getElementById('speechResultBox').classList.add('hidden');
+            
+            const choiceContainer = document.getElementById('choiceOptions');
+            const speechArea = document.getElementById('speechArea');
+            const storyContainer = document.getElementById('storyContainer');
+            
+            choiceContainer.innerHTML = '';
+            choiceContainer.classList.add('hidden');
+            speechArea.classList.add('hidden');
+            storyContainer.classList.add('hidden');
+
+            // Render Story Box if Story Question
+            if (q.type === 'story_question') {
+                storyContainer.classList.remove('hidden');
+                document.getElementById('storyText').textContent = q.story;
+            }
+
+            // Question Type Badge
+            const badge = document.getElementById('questionTypeBadge');
+            if (q.type === 'vocab_choice') {
+                badge.innerHTML = '<i class="fa-solid fa-spell-check"></i> Vocab & Listening';
+            } else if (q.type === 'speech_read') {
+                badge.innerHTML = '<i class="fa-solid fa-microphone"></i> Pronunciation';
+            } else if (q.type === 'story_question') {
+                badge.innerHTML = '<i class="fa-solid fa-book-open"></i> Story Comprehension';
+            }
+
+            document.getElementById('questionTitle').textContent = q.prompt;
+
+            // Render Multiple Choice Options or Speech Box
+            if (q.type === 'vocab_choice' || q.type === 'story_question') {
+                choiceContainer.classList.remove('hidden');
+                q.options.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn p-4 rounded-2xl bg-slate-700/60 hover:bg-slate-600 border border-slate-600 text-slate-100 font-medium text-left transition-all active:scale-98 flex items-center justify-between';
+                    btn.innerHTML = `
+                        <span>${opt}</span>
+                        <i class="fa-regular fa-circle text-slate-400 text-sm"></i>
+                    `;
+                    btn.onclick = () => checkChoiceAnswer(idx, btn);
+                    choiceContainer.appendChild(btn);
+                });
+            } else if (q.type === 'speech_read') {
+                speechArea.classList.remove('hidden');
+                document.getElementById('targetSentenceBox').textContent = q.target;
+            }
+
+            // Auto Play TTS Voice Prompt
+            setTimeout(() => playQuestionTTS(), 300);
+        }
+
+        function playQuestionTTS() {
+            const q = currentQuestions[currentIndex];
+            let textToRead = q.target || q.prompt;
+            speakText(textToRead);
+        }
+
+        function playStoryTTS() {
+            const q = currentQuestions[currentIndex];
+            if (q.story) {
+                speakText(q.story);
+            }
+        }
+
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel(); // Cancel active speech
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = speechRate;
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleSpeechRecognition() {
+            if (!recognition) {
+                alert('您的瀏覽器不支援 Web Speech API 語音辨識功能。');
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
+        // Levenshtein Distance Algorithm for Speech Accuracy Calculation
+        function calculateSimilarity(str1, str2) {
+            const clean1 = str1.toLowerCase().replace(/[^\w\s]/gi, '').trim();
+            const clean2 = str2.toLowerCase().replace(/[^\w\s]/gi, '').trim();
+            
+            if (clean1 === clean2) return 100;
+            
+            const len1 = clean1.length;
+            const len2 = clean2.length;
+            const matrix = Array(len2 + 1).fill(null).map(() => Array(len1 + 1).fill(null));
+
+            for (let i = 0; i <= len1; i++) matrix[0][i] = i;
+            for (let j = 0; j <= len2; j++) matrix[j][0] = j;
+
+            for (let j = 1; j <= len2; j++) {
+                for (let i = 1; i <= len1; i++) {
+                    const indicator = clean1[i - 1] === clean2[j - 1] ? 0 : 1;
+                    matrix[j][i] = Math.min(
+                        matrix[j][i - 1] + 1,
+                        matrix[j - 1][i] + 1,
+                        matrix[j - 1][i - 1] + indicator
+                    );
+                }
+            }
+            
+            const distance = matrix[len2][len1];
+            const maxLen = Math.max(len1, len2);
+            return Math.max(0, Math.round(((maxLen - distance) / maxLen) * 100));
+        }
+
+        function handleSpeechResult(userSpeech) {
+            const q = currentQuestions[currentIndex];
+            const target = q.target;
+            const matchRate = calculateSimilarity(userSpeech, target);
+
+            const resultBox = document.getElementById('speechResultBox');
+            resultBox.classList.remove('hidden');
+            document.getElementById('speechResultText').textContent = `"${userSpeech}"`;
+            document.getElementById('speechMatchRate').textContent = `發音吻合度: ${matchRate}%`;
+
+            const isCorrect = matchRate >= 75; // 75%+ considered passing
+            handleAnswerResult(isCorrect, isCorrect ? `語音辨識成功！相似度 ${matchRate}%` : `相似度只有 ${matchRate}%，發音需要更清晰喔！`);
+        }
+
+        function checkChoiceAnswer(selectedIndex, selectedBtn) {
+            const q = currentQuestions[currentIndex];
+            const isCorrect = selectedIndex === q.answer;
+
+            // Highlight buttons
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === q.answer) {
+                    btn.classList.add('bg-emerald-600/30', 'border-emerald-500', 'text-emerald-300');
+                    btn.querySelector('i').className = 'fa-solid fa-circle-check text-emerald-400';
+                } else if (btn === selectedBtn && !isCorrect) {
+                    btn.classList.add('bg-rose-600/30', 'border-rose-500', 'text-rose-300');
+                    btn.querySelector('i').className = 'fa-solid fa-circle-xmark text-rose-400';
+                }
+            });
+
+            handleAnswerResult(isCorrect, isCorrect ? '回答正確！ Great job!' : '答錯了，繼續加油！');
+        }
+
+        function handleAnswerResult(isCorrect, message) {
+            const timeTaken = (Date.now() - questionStartTime) / 1000;
+            totalTimeSpent += timeTaken;
+
+            const feedback = document.getElementById('feedbackBox');
+            feedback.classList.remove('hidden', 'bg-emerald-500/20', 'text-emerald-300', 'border-emerald-500/40', 'bg-rose-500/20', 'text-rose-300', 'border-rose-500/40');
+            
+            if (isCorrect) {
+                playSFX('correct');
+                correctCount++;
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+
+                // Score Formula: Base (100) + Combo bonus + Speed bonus
+                const speedBonus = Math.max(0, Math.round((10 - timeTaken) * 5));
+                const comboBonus = combo * 20;
+                const earnedScore = 100 + comboBonus + speedBonus;
+                score += earnedScore;
+
+                feedback.classList.add('bg-emerald-500/20', 'text-emerald-300', 'border', 'border-emerald-500/40');
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${message} (+${earnedScore}分)`;
+            } else {
+                playSFX('wrong');
+                combo = 0;
+                feedback.classList.add('bg-rose-500/20', 'text-rose-300', 'border', 'border-rose-500/40');
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${message}`;
+            }
+
+            // Update live dashboard stats
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('comboDisplay').querySelector('span').textContent = combo;
+
+            document.getElementById('nextBtn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < 50) {
+                renderQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            document.getElementById('quizScreen').classList.add('hidden');
+            document.getElementById('summaryScreen').classList.remove('hidden');
+
+            const accuracy = Math.round((correctCount / 50) * 100);
+            const avgTime = (totalTimeSpent / 50).toFixed(1);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
+            document.getElementById('finalMaxCombo').textContent = maxCombo;
+            document.getElementById('finalAvgTime').textContent = `${avgTime}s`;
+
+            // Assign Title based on performance and difficulty
+            let title = 'English Enthusiast 英語愛好者';
+            let desc = '保持練習，你的英文發音與聽力正在不斷進步！';
+
+            if (accuracy >= 90 && maxCombo >= 15) {
+                title = ' Fluency Master 聽讀大師';
+                desc = '令人驚嘆的完美表現！你具備極佳的發音敏銳度與聽力理解力。';
+            } else if (accuracy >= 80) {
+                title = ' Pronunciation Expert 口說專家';
+                desc = '語音清晰且發音標準，聽力測驗表現相當流利穩定！';
+            } else if (accuracy >= 60) {
+                title = ' Listening Scholar 聽力達人';
+                desc = '對英文聽力與字詞已有不錯的掌握度，持續朗讀練習會更讚！';
+            }
+
+            document.getElementById('userTitle').textContent = title;
+            document.getElementById('titleDesc').textContent = desc;
+        }
+
+        function resetApp() {
+            document.getElementById('summaryScreen').classList.add('hidden');
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-rose-400';
+            }
+        }
+
+        function openVoiceSettings() {
+            document.getElementById('voiceModal').classList.remove('hidden');
+        }
+
+        function closeVoiceSettings() {
+            document.getElementById('voiceModal').classList.add('hidden');
+        }
+
+        function updateRateLabel(val) {
+            speechRate = parseFloat(val);
+            document.getElementById('rateValue').textContent = val + 'x';
+        }
+    </script>
+</body>
+</html>
